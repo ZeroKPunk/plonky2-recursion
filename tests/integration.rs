@@ -18,9 +18,9 @@ use plonky2::plonk::circuit_data::{CircuitConfig, CircuitData, VerifierCircuitDa
 use plonky2::plonk::config::{AlgebraicHasher, GenericConfig, Hasher, PoseidonGoldilocksConfig};
 use plonky2::plonk::plonk_common::reduce_with_powers_circuit;
 use plonky2::plonk::proof::ProofWithPublicInputs;
-use plonky2_crypto::u32::gadgets::arithmetic_u32::{CircuitBuilderU32, U32Target};
-use plonky2_crypto::u32::gadgets::range_check::range_check_u32_circuit;
-use plonky2_crypto::u32::witness::WitnessU32;
+use plonky2_u32::gadgets::arithmetic_u32::{CircuitBuilderU32, U32Target};
+use plonky2_u32::gadgets::range_check::range_check_u32_circuit;
+use plonky2_u32::witness::WitnessU32;
 use rand::{thread_rng, Rng};
 use std::iter::once;
 
@@ -372,17 +372,22 @@ fn test_recursive_aggregation() {
         prepare_base_circuit_for_circuit_set(&base_circuit),
         prepare_base_circuit_for_circuit_set(&base_circuit_u32),
     ];
-
+    log::info!("start build aggregation circuit");
     let mut aggregation_scheme = AggregationScheme::build_circuit(circuit_set.into_iter()).unwrap();
+    log::info!("end build aggregation circuit");
 
+    log::info!("start add_proofs_for_aggregation");
     for (proof, vd) in base_proofs {
         let prepared_proof = aggregation_scheme
             .prepare_proof_for_aggregation(proof, vd)
             .unwrap();
         aggregation_scheme = aggregation_scheme.add_proofs_for_aggregation(once(prepared_proof));
     }
+    log::info!("end add_proofs_for_aggregation");
 
+    log::info!("start aggregate_proofs");
     let (aggregation_scheme, aggregated_proof) = aggregation_scheme.aggregate_proofs().unwrap();
+    log::info!("end aggregate_proofs");
 
     check_aggregated_proof::<_, _, D, VectorState<STATE_LEN>>(
         &aggregated_proof,
